@@ -21,7 +21,7 @@ Runtime tools:
 Debian / Ubuntu:
 
 ```bash
-apt install git python3 python3-venv ipmitool lm-sensors
+apt install git python3 ipmitool lm-sensors
 sensors-detect
 ```
 
@@ -37,52 +37,42 @@ environment.systemPackages = with pkgs; [
 
 ## Install
 
-Recommended system install on Debian / Ubuntu:
+System install:
 
 ```bash
 git clone https://github.com/makeding/fujitsu-1320-m4-fancontrol.git
 cd fujitsu-1320-m4-fancontrol
-sh scripts/install-system.sh
+install -m 0755 irmc_fan.py /usr/local/sbin/irmc_fan.py
+install -m 0755 irmc_fan_daemon.py /usr/local/sbin/irmc_fan_daemon.py
+install -m 0644 systemd/irmc-fan-daemon.service /etc/systemd/system/irmc-fan-daemon.service
 ```
 
-This creates a venv under `/opt/fujitsu-1320-m4-fancontrol` and symlinks commands to `/usr/local/bin`.
-
-Manual venv install without cloning:
-
-```bash
-python3 -m venv /opt/fujitsu-1320-m4-fancontrol
-/opt/fujitsu-1320-m4-fancontrol/bin/python -m pip install \
-  git+https://github.com/makeding/fujitsu-1320-m4-fancontrol.git
-ln -sf /opt/fujitsu-1320-m4-fancontrol/bin/irmc-fan /usr/local/bin/irmc-fan
-ln -sf /opt/fujitsu-1320-m4-fancontrol/bin/irmc-fan-daemon /usr/local/bin/irmc-fan-daemon
-```
-
-Do not use system-wide `pip install` on Debian-like systems with PEP 668 enabled unless you intentionally pass `--break-system-packages`.
+No pip, no venv, no Python package install. The project is just two standalone scripts.
 
 ## Manual Control
 
 Set all PWM channels to 40%:
 
 ```bash
-irmc-fan set 40
+/usr/local/sbin/irmc_fan.py set 40
 ```
 
 Show fan SDR readings:
 
 ```bash
-irmc-fan sdr
+/usr/local/sbin/irmc_fan.py sdr
 ```
 
 Clear forced PWM and return to iRMC automatic control:
 
 ```bash
-irmc-fan clear
+/usr/local/sbin/irmc_fan.py clear
 ```
 
 Read force slots:
 
 ```bash
-irmc-fan read
+/usr/local/sbin/irmc_fan.py read
 ```
 
 The raw command uses Fujitsu IANA `0x002880`, encoded little-endian as `80 28 00`.
@@ -99,7 +89,7 @@ The daemon watches `sensors` output and adjusts PWM automatically. By default it
 Run manually:
 
 ```bash
-irmc-fan-daemon --interval 10
+/usr/local/sbin/irmc_fan_daemon.py --interval 10
 ```
 
 Example output:
@@ -111,28 +101,27 @@ Example output:
 If your sensor names differ:
 
 ```bash
-irmc-fan-daemon \
+/usr/local/sbin/irmc_fan_daemon.py \
   --mlx-chip mlx5-pci-0200 \
   --mlx-label sensor0
 ```
 
 ## systemd
 
-Install as root, then copy the unit:
+Install as root, then enable the unit:
 
 ```bash
-cp systemd/irmc-fan-daemon.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now irmc-fan-daemon.service
 journalctl -u irmc-fan-daemon.service -f
 ```
 
-If `pip` installs scripts somewhere other than `/usr/local/bin`, adjust `ExecStart`.
+If you install the scripts somewhere else, adjust `ExecStart`.
 
 ## Safety
 
 This tool forces PWM directly; it is not changing the official iRMC fan curve. Start with 40% or 35%, watch temperatures, and keep an easy way to run:
 
 ```bash
-irmc-fan clear
+/usr/local/sbin/irmc_fan.py clear
 ```
