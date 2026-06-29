@@ -1,0 +1,13 @@
+[Unit]
+Description=Fujitsu iRMC smart fan control
+After=multi-user.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/local/bin/irmc-fan-daemon --interval 10 --min-pwm 30 --max-pwm 100
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
